@@ -19,9 +19,8 @@ class _AddEditScreenState extends State<AddEditScreen> {
   late TextEditingController _nameController;
   late TextEditingController _priceController;
   late TextEditingController _descriptionController;
+  late TextEditingController _imageUrlController;
   String _selectedCategory = '';
-  // Temporary hardcoded image for new items since we can't do real upload in this env easily
-  String _imageUrl = 'https://lh3.googleusercontent.com/aida-public/AB6AXuCYRQ5DP9I_XaSVAIqaVQrLnpEWsexRYTnMn8FDC9u2THuZDf8M948MmhDWklOsv-Ezk9S8ZdmW6NJGZER_6g44KhMfHeBMPnSJ7NHQ2Ee0K5qOSSipuBc6PIQMgyZPR_mWX5cCPi-AlIXz1Ggm6Qjk7FxpXfdWhrU-UPCKK-Km3MRMZiTLWTbKBTQplbYqO1NnrsYzQZjS8EcOS2C45EugLmn1Je8RQ90O7gR9hiXVC7gr3CVlIcMaB-YgJNoCWjyZ3BFAIonkjoA';
 
   bool get isEdit => widget.fish != null;
 
@@ -31,10 +30,8 @@ class _AddEditScreenState extends State<AddEditScreen> {
     _nameController = TextEditingController(text: widget.fish?.name ?? '');
     _priceController = TextEditingController(text: widget.fish?.price.toInt().toString() ?? '');
     _descriptionController = TextEditingController(text: widget.fish?.description ?? '');
+    _imageUrlController = TextEditingController(text: widget.fish?.imageUrl ?? '');
     _selectedCategory = widget.fish?.category ?? '';
-    if (widget.fish != null) {
-      _imageUrl = widget.fish!.imageUrl;
-    }
   }
 
   @override
@@ -42,6 +39,7 @@ class _AddEditScreenState extends State<AddEditScreen> {
     _nameController.dispose();
     _priceController.dispose();
     _descriptionController.dispose();
+    _imageUrlController.dispose();
     super.dispose();
   }
 
@@ -52,6 +50,7 @@ class _AddEditScreenState extends State<AddEditScreen> {
       final name = _nameController.text;
       final price = double.tryParse(_priceController.text) ?? 0;
       final description = _descriptionController.text;
+      final imageUrl = _imageUrlController.text;
 
       if (isEdit) {
         final updatedFish = widget.fish!.copyWith(
@@ -59,7 +58,7 @@ class _AddEditScreenState extends State<AddEditScreen> {
           price: price,
           description: description,
           category: _selectedCategory,
-          imageUrl: _imageUrl,
+          imageUrl: imageUrl,
         );
         provider.updateFish(updatedFish);
       } else {
@@ -68,7 +67,7 @@ class _AddEditScreenState extends State<AddEditScreen> {
           name: name,
           price: price,
           location: 'Bogor, Jawa Barat', // Default for user
-          imageUrl: _imageUrl,
+          imageUrl: imageUrl,
           description: description,
           category: _selectedCategory,
           isMine: true,
@@ -111,71 +110,100 @@ class _AddEditScreenState extends State<AddEditScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Photo Upload
+                    // Photo URL Input and Preview
                     const Text(
-                      'Foto Ikan',
+                      'Foto Ikan (URL)',
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 12),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF192F33).withOpacity(0.3) : Colors.grey[100],
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: AppTheme.primary,
-                          style: BorderStyle.solid,
-                          width: 1, // Simulated dashed border by solid for now or custom painter
-                        ),
+
+                    TextFormField(
+                      controller: _imageUrlController,
+                      decoration: _inputDecoration(context, 'Masukkan URL Gambar (https://...)').copyWith(
+                        prefixIcon: const Icon(Icons.link),
                       ),
-                      child: Column(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primary.withOpacity(0.2),
-                              shape: BoxShape.circle,
+                      validator: (value) => value!.isEmpty ? 'URL Gambar harus diisi' : null,
+                      onChanged: (value) => setState(() {}),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Image Preview
+                    if (_imageUrlController.text.isNotEmpty)
+                      Container(
+                        width: double.infinity,
+                        height: 200,
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF192F33).withOpacity(0.3) : Colors.grey[100],
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: AppTheme.primary,
+                            width: 1,
+                          ),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(15),
+                          child: Image.network(
+                            _imageUrlController.text,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.broken_image, color: Colors.red, size: 40),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Gambar tidak dapat dimuat',
+                                  style: TextStyle(
+                                    color: isDark ? const Color(0xFF92C0C9) : Colors.grey[500],
+                                  ),
+                                ),
+                              ],
                             ),
-                            child: Icon(
-                              isEdit ? Icons.photo_library : Icons.add_a_photo,
-                              color: AppTheme.primary,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Center(
+                                child: CircularProgressIndicator(
+                                  value: loadingProgress.expectedTotalBytes != null
+                                      ? loadingProgress.cumulativeBytesLoaded /
+                                          loadingProgress.expectedTotalBytes!
+                                      : null,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      )
+                    else
+                      Container(
+                        width: double.infinity,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF192F33).withOpacity(0.3) : Colors.grey[100],
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Colors.grey.withOpacity(0.3),
+                            style: BorderStyle.solid,
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.image,
+                              color: isDark ? const Color(0xFF92C0C9).withOpacity(0.5) : Colors.grey[400],
                               size: 40,
                             ),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            isEdit ? '3 Foto Diunggah' : 'Unggah Foto',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            isEdit
-                                ? 'Ganti atau tambah foto terbaik ikan hiasmu (Maks. 5)'
-                                : 'Tambahkan hingga 5 foto terbaik ikan hiasmu agar cepat laku',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: isDark ? const Color(0xFF92C0C9) : Colors.grey[500],
-                              fontSize: 12,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          ElevatedButton(
-                            onPressed: () {
-                              // Simulate selecting photo
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primary,
-                              foregroundColor: const Color(0xFF101F22),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Preview gambar akan muncul di sini',
+                              style: TextStyle(
+                                color: isDark ? const Color(0xFF92C0C9).withOpacity(0.5) : Colors.grey[400],
+                                fontSize: 12,
                               ),
                             ),
-                            child: Text(isEdit ? 'Kelola Foto' : 'Pilih Foto'),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
 
                     const SizedBox(height: 24),
 
@@ -341,7 +369,7 @@ class _AddEditScreenState extends State<AddEditScreen> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: AppTheme.primary.withOpacity(0.5), width: 2),
+        borderSide: BorderSide(color: AppTheme.primary.withValues(alpha: 0.5), width: 2),
       ),
     );
   }
