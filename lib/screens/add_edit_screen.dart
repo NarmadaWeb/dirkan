@@ -20,6 +20,7 @@ class _AddEditScreenState extends State<AddEditScreen> {
   late TextEditingController _priceController;
   late TextEditingController _descriptionController;
   late TextEditingController _imageUrlController;
+  late TextEditingController _locationController;
   String _selectedCategory = '';
 
   bool get isEdit => widget.fish != null;
@@ -31,6 +32,7 @@ class _AddEditScreenState extends State<AddEditScreen> {
     _priceController = TextEditingController(text: widget.fish?.price.toInt().toString() ?? '');
     _descriptionController = TextEditingController(text: widget.fish?.description ?? '');
     _imageUrlController = TextEditingController(text: widget.fish?.imageUrl ?? '');
+    _locationController = TextEditingController(text: widget.fish?.location ?? '');
     _selectedCategory = widget.fish?.category ?? '';
   }
 
@@ -40,6 +42,7 @@ class _AddEditScreenState extends State<AddEditScreen> {
     _priceController.dispose();
     _descriptionController.dispose();
     _imageUrlController.dispose();
+    _locationController.dispose();
     super.dispose();
   }
 
@@ -51,6 +54,7 @@ class _AddEditScreenState extends State<AddEditScreen> {
       final price = double.tryParse(_priceController.text) ?? 0;
       final description = _descriptionController.text;
       final imageUrl = _imageUrlController.text;
+      final location = _locationController.text;
 
       if (isEdit) {
         final updatedFish = widget.fish!.copyWith(
@@ -59,6 +63,7 @@ class _AddEditScreenState extends State<AddEditScreen> {
           description: description,
           category: _selectedCategory,
           imageUrl: imageUrl,
+          location: location,
         );
         provider.updateFish(updatedFish);
       } else {
@@ -66,7 +71,7 @@ class _AddEditScreenState extends State<AddEditScreen> {
           id: '', // Generated in provider
           name: name,
           price: price,
-          location: 'Bogor, Jawa Barat', // Default for user
+          location: location.isNotEmpty ? location : 'Indonesia',
           imageUrl: imageUrl,
           description: description,
           category: _selectedCategory,
@@ -213,6 +218,16 @@ class _AddEditScreenState extends State<AddEditScreen> {
                       controller: _nameController,
                       decoration: _inputDecoration(context, 'Contoh: Betta Halfmoon Fancy'),
                       validator: (value) => value!.isEmpty ? 'Nama harus diisi' : null,
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Location
+                    _buildLabel('Alamat'),
+                    TextFormField(
+                      controller: _locationController,
+                      decoration: _inputDecoration(context, 'Contoh: Bogor, Jawa Barat'),
+                      validator: (value) => value!.isEmpty ? 'Alamat harus diisi' : null,
                     ),
 
                     const SizedBox(height: 16),
